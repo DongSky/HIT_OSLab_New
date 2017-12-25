@@ -10,7 +10,6 @@
 #include <kern/console.h>
 #include <kern/monitor.h>
 #include <kern/kdebug.h>
-#include <kern/trap.h>
 
 #define CMDBUF_SIZE	80	// enough for one VGA text line
 
@@ -25,7 +24,6 @@ struct Command {
 static struct Command commands[] = {
 	{ "help", "Display this list of commands", mon_help },
 	{ "kerninfo", "Display information about the kernel", mon_kerninfo },
-    {"backtrace", "Display information about the system\'s stack", mon_backtrace },
 };
 
 /***** Implementations of basic kernel monitor commands *****/
@@ -60,15 +58,7 @@ int
 mon_backtrace(int argc, char **argv, struct Trapframe *tf)
 {
 	// Your code here.
-	uint32_t * ebp = (uint32_t *)read_ebp();
-    uint32_t eip = ebp[1], arg1 = ebp[2], arg2 = ebp[3], arg3 = ebp[4], arg4 = ebp[5], arg5 = ebp[6];
-    cprintf("Stack backtrace:\n");
-    while(ebp){
-        cprintf("    ebp %08x  eip %08x  args %08x %08x %08x %08x %08x\n",ebp, eip, arg1, arg2, arg3, arg4, arg5);
-        ebp = (uint32_t *)ebp[0];
-        eip = ebp[1], arg1 = ebp[2], arg2 = ebp[3], arg3 = ebp[4], arg4 = ebp[5], arg5 = ebp[6];
-    }
-    return 0;
+	return 0;
 }
 
 
@@ -120,12 +110,13 @@ void
 monitor(struct Trapframe *tf)
 {
 	char *buf;
-    int x =1, y = 3, z = 4;
-    unsigned int i = 0x00646c72;
+        int x =1, y = 3, z = 4;
+        unsigned int i = 0x00646c72;
 	cprintf("Welcome to the JOS kernel monitor!\n");
 	cprintf("Type 'help' for a list of commands.\n");
-	if (tf != NULL)
-		print_trapframe(tf);
+        cprintf("x %d, y %d, z %d\n", x, y, z);
+	cprintf("H%x Wo%s\n", 57616, &i);
+	cprintf("x=%d y=%d\n", 3);
 	while (1) {
 		buf = readline("K> ");
 		if (buf != NULL)
