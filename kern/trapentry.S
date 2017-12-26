@@ -1,5 +1,3 @@
-/* See COPYRIGHT for copyright information. */
-
 #include <inc/mmu.h>
 #include <inc/memlayout.h>
 #include <inc/trap.h>
@@ -41,49 +39,74 @@
 	pushl $(num);							\
 	jmp _alltraps
 
+
+#define ec(name, num)\
+.data;\
+	.long name;\
+.text;\
+	.globl name;\
+	.type name, @function;\
+	.align 2;\
+name:\
+	pushl $(num);\
+	jmp _alltraps
+
+#define noec(name, num)\
+.data;\
+	.long name;\
+.text;\
+	.globl name;\
+	.type name, @function;\
+	.align 2;\
+name:\
+	pushl $0;\
+	pushl $(num);\
+	jmp _alltraps
+
+#define misaka()\
+.data;\
+	.long 0
+
+.data
+	.p2align 2
+	.globl funs
+funs:
 .text
-
 /*
- * Lab 3: Your code here for generating entry points for the different traps.
+ * Challenge: my code here
  */
-TRAPHANDLER_NOEC(t_divide, T_DIVIDE)
-TRAPHANDLER_NOEC(t_debug, T_DEBUG)
-TRAPHANDLER_NOEC(t_nmi, T_NMI)
-TRAPHANDLER_NOEC(t_brkpt, T_BRKPT)
-TRAPHANDLER_NOEC(t_oflow, T_OFLOW)
-TRAPHANDLER_NOEC(t_bound, T_BOUND)
-TRAPHANDLER_NOEC(t_illop, T_ILLOP)
-TRAPHANDLER_NOEC(t_device, T_DEVICE)
-TRAPHANDLER(t_dblflt, T_DBLFLT)
-TRAPHANDLER(t_tss, T_TSS)
-TRAPHANDLER(t_segnp, T_SEGNP)
-TRAPHANDLER(t_stack, T_STACK)
-TRAPHANDLER(t_gpflt, T_GPFLT)
-TRAPHANDLER(t_pgflt, T_PGFLT)
-TRAPHANDLER_NOEC(t_fperr, T_FPERR)
-TRAPHANDLER(t_align, T_ALIGN)
-TRAPHANDLER_NOEC(t_mchk, T_MCHK)
-TRAPHANDLER_NOEC(t_simderr, T_SIMDERR)
-TRAPHANDLER_NOEC(t_syscall, T_SYSCALL)
-TRAPHANDLER_NOEC(irq_timer, IRQ_OFFSET + IRQ_TIMER)
-TRAPHANDLER_NOEC(irq_kbd, IRQ_OFFSET + IRQ_KBD)
-TRAPHANDLER_NOEC(irq_serial, IRQ_OFFSET + IRQ_SERIAL)
-TRAPHANDLER_NOEC(irq_spurious, IRQ_OFFSET + IRQ_SPURIOUS)
-TRAPHANDLER_NOEC(irq_ide, IRQ_OFFSET + IRQ_IDE)
-TRAPHANDLER_NOEC(irq_error, IRQ_OFFSET + IRQ_ERROR)
-
-
+	noec(th0, 0)
+	noec(th1, 1)
+	misaka()
+	noec(th3, 3)
+	noec(th4, 4)
+	noec(th5, 5)
+	noec(th6, 6)
+	noec(th7, 7)
+	ec(th8, 8)
+	noec(th9, 9)
+	ec(th10, 10)
+	ec(th11, 11)
+	ec(th12, 12)
+	ec(th13, 13)
+	ec(th14, 14)
+	misaka()
+	noec(th16, 16)
+.data
+	.space 124
+.text
+	noec(th48, 48)
 
 /*
  * Lab 3: Your code here for _alltraps
  */
 _alltraps:
-    # Build trap frame.
 	pushl %ds
-    pushl %es
+	pushl %es
 	pushal
-	movw $(GD_KD), %ax
-	movw %ax, %ds
-	movw %ax, %es
+	pushl $GD_KD
+	popl %ds
+	pushl $GD_KD
+	popl %es
 	pushl %esp
 	call trap
