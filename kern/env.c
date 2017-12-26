@@ -1,5 +1,3 @@
-/* See COPYRIGHT for copyright information. */
-
 #include <inc/x86.h>
 #include <inc/mmu.h>
 #include <inc/error.h>
@@ -273,16 +271,28 @@ region_alloc(struct Env *e, void *va, size_t len)
 	//   'va' and 'len' values that are not page-aligned.
 	//   You should round va down, and round (va + len) up.
 	//   (Watch out for corner-cases!)
-    struct PageInfo * p =NULL;
-    int ret;
-    void * va_aligned = ROUNDDOWN(va, PGSIZE);
-    void * end = ROUNDUP(va + len, PGSIZE);
-    for(; va_aligned <= end; va_aligned += PGSIZE){
-        struct PageInfo *pp = page_alloc(1);
-        if(pp == NULL){
-            panic("Out of memory!\n");
+
+    va = ROUNDDOWN(va, PGSIZE);
+    len = ROUNDUP(len, PGSIZE);
+
+    struct PageInfo *pp;
+    int ret = 0;
+
+    for(; len > 0; len -= PGSIZE, va += PGSIZE)
+    {
+        pp = page_alloc(0);
+
+        if(!pp)
+        {
+            panic("region_alloc failed\n");
         }
-        page_insert(e->env_pgdir, pp, va_aligned, PTE_U | PTE_W);
+
+        ret = page_insert(e->env_pgdir, pp, va, PTE_U | PTE_W | PTE_P);
+
+        if(ret)
+        {
+            panic("region_alloc failed\n");
+        }
     }
 }
 
