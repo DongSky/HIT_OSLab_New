@@ -29,28 +29,27 @@ sched_yield(void)
 	// below to halt the cpu.
 
 	// LAB 4: Your code here.
-    
-    idle = thiscpu->cpu_env;  
-    uint32_t start = (idle != NULL) ? ENVX( idle->env_id) : 0;  
-    uint32_t i = start;  
-    bool first = true;  
-    for (; i != start || first; i = (i+1) % NENV, first = false)  
-    {  
-        if(envs[i].env_status == ENV_RUNNABLE)  
-        {  
-            env_run(&envs[i]);  
-            return ;  
-        }  
-    }  
-  
-    if (idle && idle->env_status == ENV_RUNNING)  
-    {  
-        env_run(idle);  
-        return ;  
-    }  
-  
-    // sched_halt never returns  
-    sched_halt();  
+	struct Env *e;
+	// cprintf("curenv: %x\n", curenv);
+	int i, cur=0;
+	if (curenv) cur=ENVX(curenv->env_id);
+		else cur = 0;
+	// cprintf("cur: %x, thiscpu: %x\n", cur, thiscpu->cpu_id);
+	for (i = 0; i < NENV; ++i) {
+		int j = (cur+i) % NENV;
+		// if (j < 2) cprintf("envs[%x].env_status: %x\n", j, envs[j].env_status);
+		if (envs[j].env_status == ENV_RUNNABLE) {
+			// if (j == 1) 
+			// 	cprintf("\n");
+			env_run(envs + j);
+		}
+	}
+	if (curenv && curenv->env_status == ENV_RUNNING)
+		env_run(curenv);
+
+	// sched_halt never returns
+	// cprintf("Nothing runnable\n");
+	sched_halt();
 }
 
 // Halt this CPU when there is nothing to do. Wait until the
@@ -65,11 +64,12 @@ sched_halt(void)
 	// environments in the system, then drop into the kernel monitor.
 	for (i = 0; i < NENV; i++) {
 		if ((envs[i].env_status == ENV_RUNNABLE ||
-		     envs[i].env_status == ENV_RUNNING ||
-		     envs[i].env_status == ENV_DYING))
+		     envs[i].env_status == ENV_RUNNING))
 			break;
 	}
 	if (i == NENV) {
+		for (i = 0; i < 2; ++i)
+			cprintf("envs[%x].env_status: %x\n", i, envs[i].env_status);
 		cprintf("No runnable environments in the system!\n");
 		while (1)
 			monitor(NULL);
@@ -93,11 +93,7 @@ sched_halt(void)
 		"movl %0, %%esp\n"
 		"pushl $0\n"
 		"pushl $0\n"
-		// Uncomment the following line after completing exercise 13
-		//"sti\n"
-		"1:\n"
+		"sti\n"
 		"hlt\n"
-		"jmp 1b\n"
 	: : "a" (thiscpu->cpu_ts.ts_esp0));
 }
-

@@ -50,7 +50,9 @@ i386_init(void)
 
 	// Acquire the big kernel lock before waking up APs
 	// Your code here:
+
     lock_kernel();
+
 	// Starting non-boot CPUs
 	boot_aps();
 
@@ -60,10 +62,21 @@ i386_init(void)
 #else
 	// Touch all you want.
 	//ENV_CREATE(user_primes, ENV_TYPE_USER);
-	ENV_CREATE(user_idle, ENV_TYPE_USER);
-	ENV_CREATE(user_yield, ENV_TYPE_USER);
-	ENV_CREATE(user_yield, ENV_TYPE_USER);
-	ENV_CREATE(user_yield, ENV_TYPE_USER);
+
+    /*
+     ** This is used for testing lab4 Part 1
+    ENV_CREATE(user_idle, ENV_TYPE_USER);
+    ENV_CREATE(user_yield, ENV_TYPE_USER);
+    ENV_CREATE(user_yield, ENV_TYPE_USER);
+    ENV_CREATE(user_yield, ENV_TYPE_USER);
+     */
+    
+
+    /*
+     ** This is also for lab4 Part 1
+    */
+    ENV_CREATE(user_faultdie, ENV_TYPE_USER);
+
 #endif // TEST*
 
 	// Schedule and run the first user environment!
@@ -120,10 +133,12 @@ mp_main(void)
 	// only one CPU can enter the scheduler at a time!
 	//
 	// Your code here:
+
     lock_kernel();
     sched_yield();
-	// Remove this after you finish Exercise 6
-	for (;;);
+
+	// Remove this after you finish Exercise 4
+	//for (;;);
 }
 
 /*
@@ -146,7 +161,7 @@ _panic(const char *file, int line, const char *fmt,...)
 	panicstr = fmt;
 
 	// Be extra sure that the machine is in as reasonable state
-	asm volatile("cli; cld");
+	__asm __volatile("cli; cld");
 
 	va_start(ap, fmt);
 	cprintf("kernel panic on CPU %d at %s:%d: ", cpunum(), file, line);

@@ -507,17 +507,38 @@ boot_map_region(pde_t *pgdir, uintptr_t va, size_t size, physaddr_t pa, int perm
 int
 page_insert(pde_t *pgdir, struct PageInfo *pp, void *va, int perm)
 {
-	pte_t *pte = pgdir_walk(pgdir, va, 1);	//create on demand
-	if (!pte) 	//page table not allocated
-		return -E_NO_MEM;	
-	//increase ref count to avoid the corner case that pp is freed before it is inserted.
-	pp->pp_ref++;	
-	if (*pte & PTE_P) 	//page colides, tle is invalidated in page_remove
-		page_remove(pgdir, va);
-	*pte = page2pa(pp) | perm | PTE_P;
+	// Fill this function in
+    pte_t *pte = pgdir_walk(pgdir, va, 0);
+    physaddr_t ppa = page2pa(pp);
+
+    if(pte)
+    {
+        if(*pte & PTE_P)
+        {
+            page_remove(pgdir, va);
+        }
+
+        if(page_free_list == pp)
+        {
+            page_free_list = page_free_list->pp_link;
+        }
+    }
+    else
+    {
+        pte = pgdir_walk(pgdir, va, 1);
+        if(!pte)
+        {
+            return -E_NO_MEM;
+        }
+
+    }
+
+    *pte = page2pa(pp) | PTE_P | perm;
+
+    pp->pp_ref++;
+    tlb_invalidate(pgdir, va);
 	return 0;
 }
-
 //
 // Return the page mapped at virtual address 'va'.
 // If pte_store is not zero, then we store in it the address
@@ -532,11 +553,17 @@ page_insert(pde_t *pgdir, struct PageInfo *pp, void *va, int perm)
 struct PageInfo *
 page_lookup(pde_t *pgdir, void *va, pte_t **pte_store)
 {
-	pte_t *pte = pgdir_walk(pgdir, va, 0);	//not create
-	if (!pte || !(*pte & PTE_P)) return NULL;	//page not found
-	if (pte_store)
-		*pte_store = pte;	//found and set
-	return pa2page(PTE_ADDR(*pte));		
+	// Fill this function in
+    pte_t * pte = pgdir_walk(pgdir, va, 0);
+
+    if(!pte)
+    {
+        return NULL;
+    }
+
+    *pte_store = pte;
+
+	return pa2page(PTE_ADDR(*pte));
 }
 
 //
