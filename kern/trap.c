@@ -65,14 +65,30 @@ static const char *trapname(int trapno)
 	return "(unknown trap)";
 }
 
-
+#define H(NUM) handler##NUM
+#define SG(NUM, ISTRAP, PL)                        \
+    do { \
+	    extern void H(NUM)(); \
+	    SETGATE(idt[NUM], ISTRAP, GD_KT, H(NUM), PL); \
+    } while (0)
 void
 trap_init(void)
 {
 	extern struct Segdesc gdt[];
 
 	// LAB 3: Your code here.
-
+	extern void (*funs[])();
+	cprintf("funs %x\n", funs);
+	cprintf("funs[0] %x\n", funs[0]);
+	cprintf("funs[48] %x\n", funs[48]);
+	int i;
+	for (i = 0; i <= 16; ++i)
+		if (i==T_BRKPT)
+			SETGATE(idt[i], 0, GD_KT, funs[i], 3)
+		else if (i!=2 && i!=15) {
+			SETGATE(idt[i], 0, GD_KT, funs[i], 0);
+		}
+	SETGATE(idt[48], 0, GD_KT, funs[48], 3);
 	// Per-CPU setup 
 	trap_init_percpu();
 }
@@ -174,8 +190,28 @@ print_regs(struct PushRegs *regs)
 static void
 trap_dispatch(struct Trapframe *tf)
 {
-	// Handle processor exceptions.
-	// LAB 3: Your code here.
+
+    // Handle processor exceptions.
+    // LAB 3: Your code here.
+	int r;
+    switch(tf->tf_trapno)
+    {
+        case T_PGFLT:
+                page_fault_handler(tf);
+                return;
+        case T_BRKPT:
+                monitor(tf);
+                return;
+
+        case T_SYSCALL:	               
+			r = syscall (tf->tf_regs.reg_eax,tf->tf_regs.reg_edx,
+			     tf->tf_regs.reg_ecx,tf->tf_regs.reg_ebx,
+			     tf->tf_regs.reg_edi,tf->tf_regs.reg_esi);
+			if (r < 0)
+				panic ("trap_dispatch: The System Call number is invalid");
+			tf->tf_regs.reg_eax = r;
+            return;
+    }
 
 	// Handle spurious interrupts
 	// The hardware sometimes raises these because of noise on the
@@ -271,7 +307,8 @@ page_fault_handler(struct Trapframe *tf)
 	// Handle kernel-mode page faults.
 
 	// LAB 3: Your code here.
-
+    	if ((tf->tf_cs&3) == 0)
+		panic("Kernel page fault!");
 	// We've already handled kernel-mode exceptions, so if we get here,
 	// the page fault happened in user mode.
 
