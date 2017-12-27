@@ -121,21 +121,23 @@ trap_init_percpu(void)
 	// user space on that CPU.
 	//
 	// LAB 4: Your code here:
+    int id = cpunum();
 
 	// Setup a TSS so that we get the right stack
 	// when we trap to the kernel.
-	ts.ts_esp0 = KSTACKTOP;
-	ts.ts_ss0 = GD_KD;
-	ts.ts_iomb = sizeof(struct Taskstate);
+	//thiscpu->cpu_ts.ts_esp0 = KSTACKTOP;
+	thiscpu->cpu_ts.ts_esp0 = KSTACKTOP - id * (KSTKSIZE + KSTKGAP);
+    thiscpu->cpu_ts.ts_ss0 = GD_KD;
+	thiscpu->cpu_ts.ts_iomb = sizeof(struct Taskstate);
 
 	// Initialize the TSS slot of the gdt.
-	gdt[GD_TSS0 >> 3] = SEG16(STS_T32A, (uint32_t) (&ts),
+	gdt[(GD_TSS0 >> 3) + id] = SEG16(STS_T32A, (uint32_t) (&thiscpu->cpu_ts),
 					sizeof(struct Taskstate) - 1, 0);
-	gdt[GD_TSS0 >> 3].sd_s = 0;
+	gdt[(GD_TSS0 >> 3) + id].sd_s = 0;
 
 	// Load the TSS selector (like other segment selectors, the
 	// bottom three bits are special; we leave them 0)
-	ltr(GD_TSS0);
+	ltr(GD_TSS0 + (id << 3));
 
 	// Load the IDT
 	lidt(&idt_pd);
@@ -204,13 +206,8 @@ trap_dispatch(struct Trapframe *tf)
                 return;
 
         case T_SYSCALL:	               
-			r = syscall (tf->tf_regs.reg_eax,tf->tf_regs.reg_edx,
-			     tf->tf_regs.reg_ecx,tf->tf_regs.reg_ebx,
-			     tf->tf_regs.reg_edi,tf->tf_regs.reg_esi);
-			if (r < 0)
-				panic ("trap_dispatch: The System Call number is invalid");
-			tf->tf_regs.reg_eax = r;
-            return;
+			tf->tf_regs.reg_eax = syscall(tf->tf_regs.reg_eax, tf->tf_regs.reg_edx, tf->tf_regs.reg_ecx, tf->tf_regs.reg_ebx, tf->tf_regs.reg_edi, tf->tf_regs.reg_esi);
+		    return;
     }
 
 	// Handle spurious interrupts
@@ -262,7 +259,8 @@ trap(struct Trapframe *tf)
 		// Acquire the big kernel lock before doing any
 		// serious kernel work.
 		// LAB 4: Your code here.
-		assert(curenv);
+		lock_kernel();
+        assert(curenv);
 
 		// Garbage collect if current enviroment is a zombie
 		if (curenv->env_status == ENV_DYING) {
@@ -316,33 +314,34 @@ page_fault_handler(struct Trapframe *tf)
 	// page fault stack frame on the user exception stack (below
 	// UXSTACKTOP), then branch to curenv->env_pgfault_upcall.
 	//
-	// The page fault upcall might cause another page fault, in which case
-	// we branch to the page fault upcall recursively, pushing another
-	// page fault stack frame on top of the user exception stack.
-	//
-	// It is convenient for our code which returns from a page fault
-	// (lib/pfentry.S) to have one word of scratch space at the top of the
-	// trap-time stack; it allows us to more easily restore the eip/esp. In
-	// the non-recursive case, we don't have to worry about this because
-	// the top of the regular user stack is free.  In the recursive case,
-	// this means we have to leave an extra word between the current top of
-	// the exception stack and the new stack frame because the exception
-	// stack _is_ the trap-time stack.
-	//
-	// If there's no page fault upcall, the environment didn't allocate a
-	// page for its exception stack or can't write to it, or the exception
-	// stack overflows, then destroy the environment that caused the fault.
-	// Note that the grade script assumes you will first check for the page
-	// fault upcall and print the "user fault va" message below if there is
-	// none.  The remaining three checks can be combined into a single test.
-	//
-	// Hints:
-	//   user_mem_assert() and env_run() are useful here.
-	//   To change what the user environment runs, modify 'curenv->env_tf'
-	//   (the 'tf' variable points at 'curenv->env_tf').
+	if (curenv->env_pgfault_upcall) {
+		//
+		// The page fault upcall might cause another page fault, in which case
+		// we branch to the page fault upcall recursively, pushing another
+		// page fault stack frame on top of the user exception stack.
+		//
+		// The trap handler needs one word of scratch space at the top of the
+		// trap-time stack in order to return.  In the non-recursive case, we
+		// don't have to worry about this because the top of the regular user
+		// stack is free.  In the recursive case, this means we have to leave
+		// an extra word between the current top of the exception stack and
+		// the new stack frame because the exception stack _is_ the trap-time
+		// stack.
+		//
+		// If there's no page fault upcall, the environment didn't allocate a
+		// page for its exception stack or can't write to it, or the exception
+		// stack overflows, then destroy the environment that caused the fault.
+		// Note that the grade script assumes you will first check for the page
+		// fault upcall and print the "user fault va" message below if there is
+		// none.  The remaining three checks can be combined into a single test.
+		//
+		// Hints:
+		//   user_mem_assert() and env_run() are useful here.
+		//   To change what the user environment runs, modify 'curenv->env_tf'
+		//   (the 'tf' variable points at 'curenv->env_tf').
 
-	// LAB 4: Your code here.
-
+		// LAB 4: Your code here.
+	}
 	// Destroy the environment that caused the fault.
 	cprintf("[%08x] user fault va %08x ip %08x\n",
 		curenv->env_id, fault_va, tf->tf_eip);
