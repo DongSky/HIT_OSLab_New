@@ -268,8 +268,8 @@ env_alloc(struct Env **newenv_store, envid_t parent_id)
 	// You will set e->env_tf.tf_eip later.
 
 	// Enable interrupts while in user mode.
-	// LAB 4: Your code here.
-    e->env_tf.tf_eflags |= FL_IF;
+	// LAB 4: Your code here
+	e->env_tf.tf_eflags |= FL_IF;
 
 	// Clear the page fault handler until user installs one.
 	e->env_pgfault_upcall = 0;
@@ -437,23 +437,20 @@ void
 env_create(uint8_t *binary, enum EnvType type)
 {
 	// LAB 3: Your code here.
-	int ret = 0;
-    struct Env *e = NULL;
-    ret = env_alloc(&e, 0);
 
-    if(ret < 0)
-    {
-        panic("env_create: %e\n", ret);
-    }
-
-    load_icode(e, binary);
-    e->env_type = type;
-
+	struct Env * e;
+	int i = env_alloc(&e, 0);
+	if (i < 0){
+		panic("env_create failed: %e", i);
+	}
+	load_icode(e, binary);
+	e->env_type = type;
 	// If this is the file server (type == ENV_TYPE_FS) give it I/O privileges.
 	// LAB 5: Your code here.
-
+	if (type == ENV_TYPE_FS){
+		e->env_tf.tf_eflags |= FL_IOPL_3;
+	}
 }
-
 //
 // Frees env e and all memory it uses.
 //

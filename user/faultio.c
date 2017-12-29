@@ -10,7 +10,7 @@ umain(int argc, char **argv)
 	int nsecs = 1;
 	int secno = 0;
 	int diskno = 1;
-
+	cprintf("%d\n",read_eflags());
 	if (read_eflags() & FL_IOPL_3)
 		cprintf("eflags wrong\n");
 
