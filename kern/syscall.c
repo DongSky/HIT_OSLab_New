@@ -12,6 +12,7 @@
 #include <kern/console.h>
 #include <kern/sched.h>
 #include <kern/time.h>
+#include <kern/e1000.h>
 
 static envid_t
 sys_getenvid(void);
@@ -416,13 +417,24 @@ sys_ipc_recv(void *dstva)
 	sys_yield();
 	return 0;
 }
+//e1000_xmit system call function
+static int sys_net_xmit(uint8_t * addr, size_t length){
+    user_mem_assert(curenv, addr, length, PTE_U);
+    return e1000_xmit(addr, length);
+}
+
+static int sys_net_recv(uint8_t * addr){
+    user_mem_assert(curenv, addr, DATA_SIZE, PTE_U);
+    return e1000_recv(addr);
+}
 
 // Return the current time.
 static int
 sys_time_msec(void)
 {
 	// LAB 6: Your code here.
-	panic("sys_time_msec not implemented");
+	//panic("sys_time_msec not implemented");
+    return time_msec();
 }
 
 // Dispatches to the correct kernel function, passing the arguments.
@@ -464,7 +476,13 @@ syscall(uint32_t syscallno, uint32_t a1, uint32_t a2, uint32_t a3, uint32_t a4, 
 		return (int32_t)sys_ipc_recv((void *)a1);
 	case SYS_env_set_trapframe:
 		return (int32_t)sys_env_set_trapframe((envid_t) a1, (struct Trapframe *) a2);
-	default:
+	case SYS_time_msec:
+        return (int32_t)sys_time_msec();
+    case SYS_net_xmit:
+        return (int32_t)sys_net_xmit((uint8_t*)a1, (size_t)a2);
+    case SYS_net_recv:
+        return (uint32_t)sys_net_recv((uint8_t *)a1);
+    default:
 		return -E_INVAL;
 	}
 }

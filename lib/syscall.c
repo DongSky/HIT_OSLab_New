@@ -117,6 +117,14 @@ sys_ipc_recv(void *dstva)
 	return syscall(SYS_ipc_recv, 1, (uint32_t)dstva, 0, 0, 0, 0);
 }
 
+int sys_net_xmit(uint8_t * addr, size_t length){
+	return syscall(SYS_net_xmit, 0, (uint32_t)addr, (uint32_t)length, 0, 0, 0);
+}
+
+int sys_net_recv(uint8_t * addr){
+	return syscall(SYS_net_recv, 0, (uint32_t)addr, 0, 0, 0, 0);
+}
+
 unsigned int
 sys_time_msec(void)
 {
