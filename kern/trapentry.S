@@ -1,5 +1,3 @@
-/* See COPYRIGHT for copyright information. */
-
 #include <inc/mmu.h>
 #include <inc/memlayout.h>
 #include <inc/trap.h>
@@ -42,15 +40,90 @@
 	pushl $(num);							\
 	jmp _alltraps
 
+
+#define ec(name, num)\
+.data;\
+	.long name;\
+.text;\
+	.globl name;\
+	.type name, @function;\
+	.align 2;\
+name:\
+	pushl $(num);\
+	jmp _alltraps
+
+#define noec(name, num)\
+.data;\
+	.long name;\
+.text;\
+	.globl name;\
+	.type name, @function;\
+	.align 2;\
+name:\
+	pushl $0;\
+	pushl $(num);\
+	jmp _alltraps
+
+#define misaka()\
+.data;\
+	.long 0
+
+.data
+	.p2align 2
+	.globl funs
+funs:
 .text
-
 /*
- * Lab 3: Your code here for generating entry points for the different traps.
+ * Challenge: my code here
  */
-
-
+	noec(th0, 0)
+	noec(th1, 1)
+	misaka()
+	noec(th3, 3)
+	noec(th4, 4)
+	noec(th5, 5)
+	noec(th6, 6)
+	noec(th7, 7)
+	ec(th8, 8)
+	noec(th9, 9)
+	ec(th10, 10)
+	ec(th11, 11)
+	ec(th12, 12)
+	ec(th13, 13)
+	ec(th14, 14)
+	misaka()
+	noec(th16, 16)
+.data
+	.space 60
+.text
+	noec(th32, 32)
+	noec(th33, 33)
+	noec(th34, 34)
+	noec(th35, 35)
+	noec(th36, 36)
+	noec(th37, 37)
+	noec(th38, 38)
+	noec(th39, 39)
+	noec(th40, 40)
+	noec(th41, 41)
+	noec(th42, 42)
+	noec(th43, 43)
+	noec(th44, 44)
+	noec(th45, 45)
+	noec(th46, 46)
+	noec(th47, 47)
+	noec(th48, 48)
 
 /*
  * Lab 3: Your code here for _alltraps
  */
-
+_alltraps:
+	pushl %ds
+	pushl %es
+	pushal
+	pushl $GD_KD
+	popl %ds
+	pushl $GD_KD
+	popl %es
+	pushl %esp
+	call trap
