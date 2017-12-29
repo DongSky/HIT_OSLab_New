@@ -158,8 +158,7 @@ monitor(struct Trapframe *tf)
 
 	cprintf("Welcome to the JOS kernel monitor!\n");
 	cprintf("Type 'help' for a list of commands.\n");
-	cprintf("%m%s\n%m%s\n%m%s\n", 
-		0x0100, "blue", 0x0200, "green", 0x0400, "red");
+	cprintf("%C%C%C%C%C%C\n",15,'M',2,'1',4,'s',12,'a',8,'k',7,'a');
 
 	if (tf != NULL)
 		print_trapframe(tf);
